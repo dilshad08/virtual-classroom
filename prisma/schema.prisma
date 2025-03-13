@@ -1,0 +1,61 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  password        String
+  role            Role
+  classrooms      ClassroomUser[]
+  participantLogs ParticipantLog[]
+}
+
+model Classroom {
+  id       String          @id @default(uuid())
+  name     String
+  isLive   Boolean         @default(false)
+  users    ClassroomUser[]
+  sessions Session[]
+}
+
+model ClassroomUser {
+  id          String    @id @default(uuid())
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  role        Role
+}
+
+model Session {
+  id          String           @id @default(uuid())
+  classroomId String
+  classroom   Classroom        @relation(fields: [classroomId], references: [id])
+  startedAt   DateTime?
+  endedAt     DateTime?
+  logs        ParticipantLog[]
+}
+
+model ParticipantLog {
+  id        String    @id @default(uuid())
+  sessionId String
+  session   Session   @relation(fields: [sessionId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  role      Role
+  joinedAt  DateTime?
+  leftAt    DateTime?
+}
