@@ -18,7 +18,7 @@ model User {
   name            String
   email           String           @unique
   password        String
-  role            Role
+  role            Role?
   classrooms      ClassroomUser[]
   participantLogs ParticipantLog[]
 }
