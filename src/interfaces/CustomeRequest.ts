@@ -1,6 +1,6 @@
 import { Request } from '@nestjs/common';
 
-interface User {
+export interface User {
   userId: string;
   email: string;
   role: string;

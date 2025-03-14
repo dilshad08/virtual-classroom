@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Server } from 'socket.io';
 import { Role, User } from '@prisma/client';
+import { CreateClassroomDto } from './dto/CreateClassRoom.dto';
 
 @Injectable()
 export class ClassroomService {
@@ -15,6 +16,21 @@ export class ClassroomService {
 
   setSocketServer(io: Server) {
     this.io = io;
+  }
+
+  async createClassroom(dto: CreateClassroomDto, teacherId: string) {
+    return await this.prisma.classroom.create({
+      data: {
+        name: dto.name,
+        isLive: false,
+        users: {
+          create: {
+            userId: teacherId,
+            role: Role.TEACHER,
+          },
+        },
+      },
+    });
   }
 
   async joinClassroom(classroomId: string, userId: string) {

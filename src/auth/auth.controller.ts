@@ -11,6 +11,8 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { CreateUserDto } from './dto/createUser.dto';
 import { User } from '@prisma/client';
+import { RolesGuard } from './guards/role.guard';
+import { CustomeRequest } from 'src/interfaces/CustomeRequest';
 
 @Controller('auth')
 export class AuthController {
@@ -38,7 +40,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Post('profile')
   @UseGuards(JwtAuthGuard)
-  getProfile(@Request() req) {
+  getProfile(@Request() req: CustomeRequest) {
     return req.user;
   }
 }

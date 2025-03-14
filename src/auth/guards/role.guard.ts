@@ -5,10 +5,11 @@ import {
   Injectable,
   ForbiddenException,
 } from '@nestjs/common';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly allowedRole: 'TEACHER' | 'STUDENT') {}
+  constructor(private readonly allowedRole: Role) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
