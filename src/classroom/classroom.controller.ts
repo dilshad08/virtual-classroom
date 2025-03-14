@@ -27,38 +27,38 @@ export class ClassroomController {
     return this.classroomService.createClassroom(classDto, teacherId);
   }
 
-  @Post(':classroomId/start')
-  @UseGuards(JwtAuthGuard, new RolesGuard('TEACHER'))
-  async startClass(
-    @Param('classroomId') classroomId: string,
-    @Req() req: CustomeRequest,
-  ) {
-    return this.classroomService.startClass(classroomId, req.user.userId);
-  }
+  //   @Post(':classroomId/start')
+  //   @UseGuards(JwtAuthGuard, new RolesGuard('TEACHER'))
+  //   async startClass(
+  //     @Param('classroomId') classroomId: string,
+  //     @Req() req: CustomeRequest,
+  //   ) {
+  //     return this.classroomService.startClass(classroomId, req.user.userId);
+  //   }
 
-  @Post(':classroomId/end')
-  @UseGuards(JwtAuthGuard, new RolesGuard('TEACHER'))
-  async endClass(@Param('classroomId') classroomId: string) {
-    return this.classroomService.endClass(classroomId);
-  }
+  //   @Post(':classroomId/end')
+  //   @UseGuards(JwtAuthGuard, new RolesGuard('TEACHER'))
+  //   async endClass(@Param('classroomId') classroomId: string) {
+  //     return this.classroomService.endClass(classroomId);
+  //   }
 
-  @Post(':classroomId/join')
-  @UseGuards(JwtAuthGuard)
-  async joinClassroom(
-    @Param('classroomId') classroomId: string,
-    @Req() req: CustomeRequest,
-  ) {
-    return this.classroomService.joinClassroom(classroomId, req.user.userId);
-  }
+  //   @Post(':classroomId/join')
+  //   @UseGuards(JwtAuthGuard)
+  //   async joinClassroom(
+  //     @Param('classroomId') classroomId: string,
+  //     @Req() req: CustomeRequest,
+  //   ) {
+  //     return this.classroomService.joinClassroom(classroomId, req.user.userId);
+  //   }
 
-  @Post(':classroomId/leave')
-  @UseGuards(JwtAuthGuard)
-  async leaveClassroom(
-    @Param('classroomId') classroomId: string,
-    @Req() req: CustomeRequest,
-  ) {
-    return this.classroomService.leaveClassroom(classroomId, req.user.userId);
-  }
+  //   @Post(':classroomId/leave')
+  //   @UseGuards(JwtAuthGuard)
+  //   async leaveClassroom(
+  //     @Param('classroomId') classroomId: string,
+  //     @Req() req: CustomeRequest,
+  //   ) {
+  //     return this.classroomService.leaveClassroom(classroomId, req.user.userId);
+  //   }
 
   @Get(':classroomId/history')
   @UseGuards(JwtAuthGuard, new RolesGuard('ADMIN'))

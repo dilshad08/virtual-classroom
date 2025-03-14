@@ -18,6 +18,10 @@ export class ClassroomService {
     this.io = io;
   }
 
+  private handleError(classroomId: string, error: Error) {
+    this.io.to(classroomId).emit('error', { message: error.message });
+  }
+
   async createClassroom(dto: CreateClassroomDto, teacherId: string) {
     return await this.prisma.classroom.create({
       data: {
@@ -37,19 +41,33 @@ export class ClassroomService {
     const user: User | null = await this.prisma.user.findUnique({
       where: { id: userId },
     });
-    if (!user) throw new NotFoundException('User not found');
-
+    if (!user) {
+      this.handleError(classroomId, new NotFoundException('User not found'));
+      throw new NotFoundException('User not found');
+    }
     const classroom = await this.prisma.classroom.findUnique({
       where: { id: classroomId },
       include: { users: true },
     });
-    if (!classroom) throw new NotFoundException('Classroom not found');
+    if (!classroom) {
+      this.handleError(
+        classroomId,
+        new NotFoundException('Classroom not found'),
+      );
+      throw new NotFoundException('Classroom not found');
+    }
 
     const existingUser = await this.prisma.classroomUser.findFirst({
       where: { classroomId, userId },
     });
 
-    if (existingUser) throw new ForbiddenException('User already in classroom');
+    if (existingUser) {
+      this.handleError(
+        classroomId,
+        new NotFoundException('User already in classroom'),
+      );
+      throw new ForbiddenException('User already in classroom');
+    }
 
     if (user.role === 'STUDENT' && !classroom.isLive) {
       throw new ForbiddenException('Class has not started');
@@ -85,7 +103,13 @@ export class ClassroomService {
       where: { classroomId, userId },
     });
 
-    if (!classroomUser) throw new NotFoundException('User not in classroom');
+    if (!classroomUser) {
+      this.handleError(
+        classroomId,
+        new NotFoundException('User not in classroom'),
+      );
+      throw new NotFoundException('User not in classroom');
+    }
 
     await this.prisma.classroomUser.delete({ where: { id: classroomUser.id } });
 
@@ -111,8 +135,14 @@ export class ClassroomService {
       where: { classroomId, userId: teacherId, role: 'TEACHER' },
     });
 
-    if (!teacher)
+    if (!teacher) {
+      this.handleError(
+        classroomId,
+        new NotFoundException('Only a teacher can start the class'),
+      );
+
       throw new ForbiddenException('Only a teacher can start the class');
+    }
 
     const session = await this.prisma.session.create({
       data: { classroomId, startedAt: new Date() },
@@ -134,7 +164,13 @@ export class ClassroomService {
       orderBy: { startedAt: 'desc' },
     });
 
-    if (!session) throw new NotFoundException('No active session found');
+    if (!session) {
+      this.handleError(
+        classroomId,
+        new NotFoundException('No active session found'),
+      );
+      throw new NotFoundException('No active session found');
+    }
 
     await this.prisma.session.update({
       where: { id: session.id },
