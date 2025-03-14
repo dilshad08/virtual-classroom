@@ -46,14 +46,12 @@ export class ClassroomGateway
     @MessageBody() data: { classroomId: string },
     @ConnectedSocket() client: CustomSocket,
   ) {
-    client.join(data.classroomId);
     const response = await this.classroomService.joinClassroom(
       data.classroomId,
-      client.user.userId,
+      client,
     );
-    this.server
-      .to(data.classroomId)
-      .emit('user_joined', { userId: client.user.userId });
+    client.join(data.classroomId);
+    this.server.to(data.classroomId).emit('user_joined', response);
     return response;
   }
 
@@ -67,11 +65,10 @@ export class ClassroomGateway
     client.leave(data.classroomId);
     const response = await this.classroomService.leaveClassroom(
       data.classroomId,
-      client.user.userId,
+      client,
     );
-    this.server
-      .to(data.classroomId)
-      .emit('user_left', { userId: client.user.userId });
+
+    this.server.to(data.classroomId).emit('user_left', response);
     return response;
   }
 
@@ -82,24 +79,22 @@ export class ClassroomGateway
     @MessageBody() data: { classroomId: string; teacherId: string },
     @ConnectedSocket() client: CustomSocket,
   ) {
-    const response = await this.classroomService.startClass(
+    return await this.classroomService.startClass(
       data.classroomId,
       client.user.userId,
     );
-    this.server
-      .to(data.classroomId)
-      .emit('class_started', { classroomId: data.classroomId });
-    return response;
   }
 
   // Teacher ends the class
   @UseGuards(WsJwtAuthGuard, new RolesGuard('TEACHER'))
   @SubscribeMessage('end_class')
-  async handleEndClass(@MessageBody() data: { classroomId: string }) {
-    const response = await this.classroomService.endClass(data.classroomId);
-    this.server
-      .to(data.classroomId)
-      .emit('class_ended', { classroomId: data.classroomId });
-    return response;
+  async handleEndClass(
+    @MessageBody() data: { classroomId: string },
+    @ConnectedSocket() client: CustomSocket,
+  ) {
+    return await this.classroomService.endClass(
+      data.classroomId,
+      client.user.userId,
+    );
   }
 }

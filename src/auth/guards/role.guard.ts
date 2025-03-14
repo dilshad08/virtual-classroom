@@ -15,10 +15,7 @@ export class RolesGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const client: CustomSocket = context.switchToWs().getClient();
     const request = context.switchToHttp().getRequest();
-    if (
-      request.user.role !== this.allowedRole ||
-      (client.user.role ?? client.user.role !== this.allowedRole)
-    ) {
+    if (request.user.role !== this.allowedRole) {
       client.emit('error', { message: 'You do not have permission' });
       client.disconnect();
       throw new ForbiddenException('You do not have permission');

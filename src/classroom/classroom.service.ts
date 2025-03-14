@@ -2,14 +2,18 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Server } from 'socket.io';
-import { Role, User } from '@prisma/client';
+import { Role, Session, User } from '@prisma/client';
 import { CreateClassroomDto } from './dto/CreateClassRoom.dto';
+import { CustomSocket } from 'src/auth/guards/WsJwtAuthGuard.guard';
 
 @Injectable()
 export class ClassroomService {
+  private readonly logger = new Logger(ClassroomService.name);
   private io: Server;
 
   constructor(private prisma: PrismaService) {}
@@ -19,7 +23,8 @@ export class ClassroomService {
   }
 
   private handleError(classroomId: string, error: Error) {
-    this.io.to(classroomId).emit('error', { message: error.message });
+    this.io.emit('error', { message: error.message });
+    throw error;
   }
 
   async createClassroom(dto: CreateClassroomDto, teacherId: string) {
@@ -37,128 +42,228 @@ export class ClassroomService {
     });
   }
 
-  async joinClassroom(classroomId: string, userId: string) {
-    const user: User | null = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      this.handleError(classroomId, new NotFoundException('User not found'));
-      throw new NotFoundException('User not found');
-    }
-    const classroom = await this.prisma.classroom.findUnique({
+  async joinClassroom(classroomId: string, client: CustomSocket) {
+    const isClassRoom = await this.prisma.classroom.findUnique({
       where: { id: classroomId },
-      include: { users: true },
+      include: {
+        users: {
+          where: {
+            userId: client.user.userId,
+          },
+        },
+        sessions: {
+          where: {
+            endedAt: null,
+          },
+          include: {
+            logs: {
+              where: {
+                userId: client.user.userId,
+              },
+            },
+          },
+        },
+      },
     });
-    if (!classroom) {
+    if (!isClassRoom) {
       this.handleError(
         classroomId,
         new NotFoundException('Classroom not found'),
       );
-      throw new NotFoundException('Classroom not found');
+      return;
     }
 
-    const existingUser = await this.prisma.classroomUser.findFirst({
-      where: { classroomId, userId },
-    });
-
-    if (existingUser) {
+    if (!isClassRoom.isLive) {
       this.handleError(
         classroomId,
-        new NotFoundException('User already in classroom'),
+        new BadRequestException('Class is not started'),
       );
-      throw new ForbiddenException('User already in classroom');
+      return;
     }
 
-    if (user.role === 'STUDENT' && !classroom.isLive) {
-      throw new ForbiddenException('Class has not started');
+    // const userExists = isClassRoom.users.some(
+    //   (user) => user.userId === client.user.userId,
+    // );
+    // if (userExists) {
+    //   this.handleError(
+    //     classroomId,
+    //     new ForbiddenException('Already in the class'),
+    //   );
+    //   return;
+    // }
+    const session = isClassRoom.sessions.find(
+      (session) => session.endedAt == null,
+    );
+    if (!session) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('Session not available'),
+      );
     }
-
-    await this.prisma.classroomUser.create({
-      data: { classroomId, userId, role: user.role as Role },
-    });
-
-    const session = await this.prisma.session.findFirst({
-      where: { classroomId, endedAt: null },
-      orderBy: { startedAt: 'desc' },
-    });
-
-    if (session) {
-      await this.prisma.participantLog.create({
+    const isUserJoined = session?.logs.find(
+      (log) => log.userId == client.user.userId,
+    );
+    if (isUserJoined && isUserJoined.leftAt == null) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('User already joined class'),
+      );
+    }
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.classroomUser.create({
         data: {
-          sessionId: session.id,
-          userId,
-          role: user.role as Role,
-          joinedAt: new Date(),
+          classroomId,
+          userId: client.user.userId,
+          role: client.user.role as Role,
         },
       });
-    }
-
-    this.io.to(classroomId).emit('user_joined', { userId, role: user.role });
-
-    return { message: `${user.role} joined the classroom` };
+      if (session) {
+        await prisma.participantLog.create({
+          data: {
+            sessionId: session.id,
+            userId: client.user.userId,
+            role: client.user.role as Role,
+            joinedAt: new Date(),
+          },
+        });
+      }
+    });
+    return { message: `${client.user.name} joined the classroom` };
   }
 
-  async leaveClassroom(classroomId: string, userId: string) {
-    const classroomUser = await this.prisma.classroomUser.findFirst({
-      where: { classroomId, userId },
+  async leaveClassroom(classroomId: string, client: CustomSocket) {
+    const isClassRoom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        users: {
+          where: {
+            userId: client.user.userId,
+          },
+        },
+        sessions: {
+          where: {
+            endedAt: null,
+          },
+          include: {
+            logs: {
+              where: {
+                userId: client.user.userId,
+              },
+            },
+          },
+        },
+      },
     });
-
-    if (!classroomUser) {
+    if (!isClassRoom) {
       this.handleError(
         classroomId,
-        new NotFoundException('User not in classroom'),
+        new NotFoundException('Classroom not found'),
       );
-      throw new NotFoundException('User not in classroom');
+      return;
     }
 
-    await this.prisma.classroomUser.delete({ where: { id: classroomUser.id } });
+    if (!isClassRoom.isLive) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('Class is not started'),
+      );
+      return;
+    }
+    const session = isClassRoom.sessions.find(
+      (session) => session.endedAt == null,
+    );
+    if (!session) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('Session not available'),
+      );
+    }
+    const isUserJoined = session?.logs.find(
+      (log) => log.userId == client.user.userId && log.leftAt == null,
+    );
+    if (!isUserJoined || isUserJoined.leftAt) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('User is not available in the class'),
+      );
+    }
 
-    const session = await this.prisma.session.findFirst({
-      where: { classroomId, endedAt: null },
-      orderBy: { startedAt: 'desc' },
+    await this.prisma.participantLog.update({
+      where: {
+        id: isUserJoined?.id,
+      },
+      data: { leftAt: new Date() },
     });
 
-    if (session) {
-      await this.prisma.participantLog.updateMany({
-        where: { sessionId: session.id, userId, leftAt: null },
-        data: { leftAt: new Date() },
-      });
-    }
-
-    this.io.to(classroomId).emit('user_left', { userId });
-
-    return { message: 'User left the classroom' };
+    return { message: `${client.user.name} left the class` };
   }
 
   async startClass(classroomId: string, teacherId: string) {
-    const teacher = await this.prisma.classroomUser.findFirst({
-      where: { classroomId, userId: teacherId, role: 'TEACHER' },
+    const isClassRoom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        users: {
+          where: {
+            userId: teacherId,
+          },
+        },
+      },
     });
 
-    if (!teacher) {
+    if (!isClassRoom) {
       this.handleError(
         classroomId,
-        new NotFoundException('Only a teacher can start the class'),
+        new NotFoundException('Classroom not found'),
       );
-
-      throw new ForbiddenException('Only a teacher can start the class');
+      return;
     }
 
-    const session = await this.prisma.session.create({
-      data: { classroomId, startedAt: new Date() },
+    if (isClassRoom.isLive) {
+      this.handleError(
+        classroomId,
+        new BadRequestException('Classroom is already live'),
+      );
+      return;
+    }
+
+    const teacherExists = isClassRoom.users.some(
+      (user) => user.userId === teacherId,
+    );
+    if (!teacherExists) {
+      this.handleError(
+        classroomId,
+        new ForbiddenException('Only the assigned teacher can start the class'),
+      );
+      return;
+    }
+
+    let session: any;
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.classroom.update({
+        where: { id: classroomId },
+        data: { isLive: true },
+      });
+
+      session = await prisma.session.create({
+        data: { classroomId, startedAt: new Date() },
+      });
+      await prisma.participantLog.create({
+        data: {
+          sessionId: session.id,
+          userId: teacherId,
+          role: Role.TEACHER,
+          joinedAt: new Date(),
+        },
+      });
     });
 
-    await this.prisma.classroom.update({
-      where: { id: classroomId },
-      data: { isLive: true },
-    });
+    // Emit WebSocket event to notify students
+    this.io.emit('class_started', { classroomId, sessionId: session.id });
 
-    this.io.to(classroomId).emit('class_started', { classroomId });
-
-    return { message: 'Class started', sessionId: session.id };
+    return { message: 'Class started successfully', sessionId: session.id };
   }
 
-  async endClass(classroomId: string) {
+  async endClass(classroomId: string, teacherId: string) {
     const session = await this.prisma.session.findFirst({
       where: { classroomId, endedAt: null },
       orderBy: { startedAt: 'desc' },
@@ -167,24 +272,31 @@ export class ClassroomService {
     if (!session) {
       this.handleError(
         classroomId,
-        new NotFoundException('No active session found'),
+        new NotFoundException(
+          'No active session found for the provided sessionId or classroomId',
+        ),
       );
       throw new NotFoundException('No active session found');
     }
-
-    await this.prisma.session.update({
-      where: { id: session.id },
-      data: { endedAt: new Date() },
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.session.update({
+        where: { id: session.id },
+        data: { endedAt: new Date() },
+      });
+      await prisma.classroom.update({
+        where: { id: classroomId },
+        data: { isLive: false },
+      });
+      await prisma.participantLog.updateMany({
+        where: {
+          sessionId: session.id,
+          leftAt: null,
+        },
+        data: { leftAt: new Date() },
+      });
     });
-
-    await this.prisma.classroom.update({
-      where: { id: classroomId },
-      data: { isLive: false },
-    });
-
-    this.io.to(classroomId).emit('class_ended', { classroomId });
-
-    return { message: 'Class ended', sessionId: session.id };
+    this.io.emit('class_ended', { classroomId, sessionId: session.id });
+    return { message: 'Class ended successfully', sessionId: session.id };
   }
 
   async getClassroomHistory(classroomId: string) {
