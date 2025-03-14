@@ -10,12 +10,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ClassroomService } from '../classroom/classroom.service';
 import { UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/role.guard';
 import {
   CustomSocket,
   WsJwtAuthGuard,
 } from '../auth/guards/WsJwtAuthGuard.guard';
+import { Role } from '@prisma/client';
+import { Roles } from '../decorators/role.decorator';
 
 @WebSocketGateway({ cors: { origin: '*' } }) // Allow CORS for frontend connections
 export class ClassroomGateway
@@ -73,7 +74,8 @@ export class ClassroomGateway
   }
 
   // Teacher starts the class
-  @UseGuards(WsJwtAuthGuard, new RolesGuard('TEACHER'))
+  @UseGuards(WsJwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER)
   @SubscribeMessage('start_class')
   async handleStartClass(
     @MessageBody() data: { classroomId: string; teacherId: string },
@@ -86,7 +88,8 @@ export class ClassroomGateway
   }
 
   // Teacher ends the class
-  @UseGuards(WsJwtAuthGuard, new RolesGuard('TEACHER'))
+  @UseGuards(WsJwtAuthGuard, RolesGuard)
+  @Roles(Role.TEACHER)
   @SubscribeMessage('end_class')
   async handleEndClass(
     @MessageBody() data: { classroomId: string },

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClassroomGateway } from './classroom.gateway';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClassroomModule } from 'src/classroom/classroom.module';
+import { ClassroomModule } from '../classroom/classroom.module';
 import { JwtService } from '@nestjs/jwt';
 
 @Module({

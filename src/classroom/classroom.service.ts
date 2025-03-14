@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Server } from 'socket.io';
 import { Role, Session, User } from '@prisma/client';
 import { CreateClassroomDto } from './dto/CreateClassRoom.dto';
-import { CustomSocket } from 'src/auth/guards/WsJwtAuthGuard.guard';
+import { CustomSocket } from '../auth/guards/WsJwtAuthGuard.guard';
 
 @Injectable()
 export class ClassroomService {
@@ -80,17 +80,6 @@ export class ClassroomService {
       );
       return;
     }
-
-    // const userExists = isClassRoom.users.some(
-    //   (user) => user.userId === client.user.userId,
-    // );
-    // if (userExists) {
-    //   this.handleError(
-    //     classroomId,
-    //     new ForbiddenException('Already in the class'),
-    //   );
-    //   return;
-    // }
     const session = isClassRoom.sessions.find(
       (session) => session.endedAt == null,
     );

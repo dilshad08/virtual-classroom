@@ -2,7 +2,7 @@ import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt'; // Make sure you have JwtService installed
 import { Socket } from 'socket.io';
-import { User } from 'src/interfaces/CustomeRequest';
+import { User } from '../../interfaces/CustomeRequest';
 import { ConfigService } from '@nestjs/config';
 
 export interface CustomSocket extends Socket {
