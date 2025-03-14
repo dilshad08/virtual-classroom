@@ -1,98 +1,125 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Virtual Classroom System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A **real-time virtual classroom system** built using **NestJS, Prisma, PostgreSQL, and Socket.IO**. This application enables teachers and students to interact in live classroom sessions with real-time updates.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
 
-## Description
+- **User Authentication** (JWT-based WebSocket & HTTP Authentication)
+- **Role-based Access Control** (Teacher & Student roles)
+- **Classroom Management** (Create, Join, Leave, Start, and End Classrooms)
+- **WebSocket-based Real-Time Updates**
+- **Session Tracking** (Logging user join and leave events)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Tech Stack
 
-## Project setup
+- **Backend:** NestJS, Prisma ORM, PostgreSQL
+- **Real-time Communication:** Socket.IO
+- **Task Queues (Optional):** BullMQ with Redis
+- **Authentication:** JWT (for HTTP & WebSocket)
+- **Deployment:** AWS (EC2)
 
-```bash
-$ npm install
-```
+## Installation
 
-## Compile and run the project
+### Prerequisites
+
+- Node.js (v18+)
+- PostgreSQL
+
+### Setup
 
 ```bash
-# development
-$ npm run start
+# Clone the repository
+git clone https://github.com/dilshad08/virtual-classroom.git
+cd virtual-classroom
 
-# watch mode
-$ npm run start:dev
+# Install dependencies
+npm install
 
-# production mode
-$ npm run start:prod
+# Copy environment variables
+touch .env
 ```
 
-## Run tests
+### Configure `.env`
+
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/virtual_classroom
+JWT_SECRET=your_secret_key
+```
+
+### Run Migrations
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npx prisma migrate dev --name init
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Run Seeders
 
 ```bash
-$ npm install -g mau
-$ mau deploy
+npx prisma db seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Start the Server
 
-## Resources
+```bash
+npm run start:dev
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## API Endpoints
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Authentication
 
-## Support
+- `POST /auth/login` – Login and get JWT token
+- `POST /auth/register` – Register a new user
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Classroom Management
 
-## Stay in touch
+- `POST /classroom` – Create a new classroom (Teacher only)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## WebSocket Events
+
+### **Client → Server**
+
+| Event Name        | Data Payload              | Description       |
+| ----------------- | ------------------------- | ----------------- |
+| `join_classroom`  | `{ classroomId, userId }` | Join a classroom  |
+| `leave_classroom` | `{ classroomId, userId }` | Leave a classroom |
+| `start_class`     | `{ classroomId }`         | Start the class   |
+| `end_class`       | `{ classroomId }`         | End the class     |
+
+## Role-Based Access Control (RBAC)
+
+The application enforces access control using **RolesGuard**.
+
+- **Admin** can:
+  - View classroom history
+- **Teachers** can:
+  - Create, start, and end classes
+- **Students** can:
+  - Join and leave classes
+  - Participate in live sessions
+
+### AWS EC2 Deployment
+
+- Set up EC2 instance
+- Install Node.js, PostgreSQL, and Redis
+- Clone repo and set up environment
+- Use **PM2** to keep the server running
+
+```bash
+pm install -g pm2
+pm run build
+pm start
+pm2 start dist/main.js --name virtual-classroom
+```
+
+## Contributing
+
+Feel free to submit pull requests and open issues to improve this project!
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT License
+
+---
+
+Happy Coding! 🚀
